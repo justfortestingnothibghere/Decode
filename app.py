@@ -75,8 +75,8 @@ def run_command():
     cmd = data.get("cmd", "").strip()
     safe_mode = data.get("safe_mode", True)
 
-    allowed_cmds = ["echo", "ls", "pwd", "whoami", "python", "wget", "curl", "pip", "cat", "head", "tail", "grep", "ps", "df", "free"]
-    dangerous_cmds = ["rm", "sudo", "mv", "kill"]
+    allowed_cmds = ["echo", "ls", "cd", "pwd", "whoami", "python", "wget", "curl", "pip", "cat", "head", "tail", "grep", "ps", "df", "free"]
+    dangerous_cmds = ["sudo", "mv", "kill"]
 
     start_time = time.time()
 
