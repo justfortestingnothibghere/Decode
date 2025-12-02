@@ -1,116 +1,253 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Live Terminal Service</title>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>⚡ Turbo Terminal</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm marked/marked.min.js"></script>
     <style>
+        :root {
+            --bg: #0d0d0d;
+            --text: #00ff95;
+            --input-bg: #000;
+            --border: #00ff95;
+            --btn: #00ff95;
+            --btn-hover: #00cc77;
+            --log-bg: #050505;
+            --accent: #00ff95;
+        }
+        [data-theme="light"] {
+            --bg: #f0f0f0;
+            --text: #000;
+            --input-bg: #fff;
+            --border: #000;
+            --btn: #000;
+            --btn-hover: #333;
+            --log-bg: #eee;
+            --accent: #0066cc;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            background: #0d0d0d;
-            color: #00ff95;
-            font-family: monospace;
-            padding: 0;
-            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+            transition: 0.3s;
         }
-
-        .container {
-            width: 90%;
-            margin: auto;
-            padding-top: 30px;
-        }
-
-        #terminal {
+        .container { max-width: 1000px; margin: auto; padding: 20px; }
+        h1, h2 { color: var(--accent); }
+        #terminal, #logs {
             background: #000;
-            padding: 20px;
-            height: 400px;
-            overflow-y: auto;
-            border-radius: 10px;
-            border: 1px solid #0f0;
-            box-shadow: 0 0 15px #00ff95;
-        }
-
-        #logs {
-            background: #050505;
-            padding: 20px;
-            height: 200px;
-            overflow-y: auto;
-            margin-top: 20px;
-            border-radius: 10px;
-            border: 1px solid #444;
-        }
-
-        input {
-            width: 100%;
-            padding: 12px;
-            margin-top: 15px;
-            background: black;
             color: #0f0;
-            border: 1px solid #00ff95;
-            border-radius: 5px;
-            outline: none;
+            padding: 15px;
+            height: 350px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            white-space: pre-wrap;
+            margin-bottom: 15px;
         }
-
+        #logs { background: var(--log-bg); height: 150px; font-size: 0.9em; }
+        .input-group { display: flex; gap: 10px; margin-bottom: 10px; }
+        input {
+            flex: 1; padding: 12px; background: var(--input-bg);
+            color: var(--text); border: 1px solid var(--border);
+            border-radius: 5px; outline: none; font-family: inherit;
+        }
         button {
-            padding: 10px 25px;
-            margin-top: 10px;
-            background: #00ff95;
-            color: black;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
+            padding: 0 20px; background: var(--btn); color: #000;
+            border: none; border-radius: 5px; cursor: pointer;
+            font-weight: bold; transition: 0.2s;
         }
-
-        button:hover {
-            background: #00dd80;
+        button:hover { background: var(--btn-hover); }
+        .toolbar {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 15px; flex-wrap: wrap; gap: 10px;
+        }
+        .stats { font-size: 0.9em; }
+        .copy-btn { font-size: 0.8em; padding: 2px 8px; }
+        .theme-toggle { background: var(--accent); color: #000; }
+        .file-list { max-height: 100px; overflow-y: auto; margin: 10px 0; padding: 10px; background: #111; border-radius: 5px; }
+        .file-item { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #333; }
+        .file-item a { color: #0f0; text-decoration: underline; }
+        .autocomplete { position: absolute; background: #111; border: 1px solid #0f0; color: #0f0; z-index: 100; max-height: 150px; overflow-y: auto; width: 300px; }
+        .autocomplete div { padding: 8px; cursor: pointer; }
+        .autocomplete div:hover { background: #0f0; color: #000; }
+        .hidden { display: none; }
+        @media (max-width: 600px) {
+            .input-group { flex-direction: column; }
+            button { width: 100%; }
         }
     </style>
 </head>
 <body>
 <div class="container">
+    <div class="toolbar">
+        <h1>⚡ Turbo Terminal</h1>
+        <div>
+            <button class="theme-toggle" onclick="toggleTheme()">Light/Dark</button>
+            <label><input type="checkbox" id="safeMode" checked> Safe Mode</label>
+        </div>
+    </div>
 
-    <h2>⚡ Live Terminal</h2>
+    <div id="terminal">> Ready. Type a command and press Enter or click Run.<br></div>
 
-    <div id="terminal">Ready...</div>
+    <div class="input-group">
+        <div style="position:relative; flex:1;">
+            <input id="cmd" placeholder="ls, pip list, echo Hello, ps aux..." autocomplete="off" />
+            <div id="autocomplete" class="autocomplete hidden"></div>
+        </div>
+        <button onclick="runCmd()">Run</button>
+    </div>
 
-    <input id="cmd" placeholder="Enter command (allowed: echo, ls, pwd, whoami)">
-    <button onclick="runCmd()">Run</button>
+    <div class="stats">CPU: <span id="cpu">0</span>% | RAM: <span id="ram">0</span>% | <span id="clock"></span></div>
 
-    <h2>📡 Real-Time Logs</h2>
+    <h2>Real-Time Logs</h2>
     <div id="logs"></div>
 
+    <h2>File Manager</h2>
+    <input type="file" id="fileInput" />
+    <button onclick="uploadFile()">Upload</button>
+    <div id="fileList" class="file-list"></div>
 </div>
 
 <script>
-    // --------------------------------------
-    // SEND COMMAND TO BACKEND
-    // --------------------------------------
-    async function runCmd() {
-        const command = document.getElementById("cmd").value;
+    const terminal = document.getElementById("terminal");
+    const logsDiv = document.getElementById("logs");
+    const cmdInput = document.getElementById("cmd");
+    const autocomplete = document.getElementById("autocomplete");
+    const fileList = document.getElementById("fileList");
 
+    let history = [];
+    let historyIndex = -1;
+    const suggestions = ["ls", "ls -la", "pwd", "whoami", "echo Hello", "pip list", "ps aux", "df -h", "free -h", "cat ", "head ", "tail ", "grep "];
+
+    // Theme
+    function toggleTheme() {
+        const isLight = document.body.getAttribute("data-theme") === "light";
+        document.body.setAttribute("data-theme", isLight ? "" : "light");
+        localStorage.setItem("theme", isLight ? "dark" : "light");
+    }
+    if (localStorage.getItem("theme") === "light") toggleTheme();
+
+    // Clock
+    setInterval(() => {
+        document.getElementById("clock").textContent = new Date().toLocaleTimeString();
+    }, 1000);
+
+    // Command History
+    cmdInput.addEventListener("keydown", function(e) {
+        if (e.key === "Enter") runCmd();
+        if (e.key === "ArrowUp" && history.length > 0) {
+            if (historyIndex < history.length - 1) historyIndex++;
+            cmdInput.value = history[history.length - 1 - historyIndex];
+        }
+        if (e.key === "ArrowDown") {
+            if (historyIndex > 0) historyIndex--;
+            else { historyIndex = -1; cmdInput.value = ""; return; }
+            cmdInput.value = history[history.length - 1 - historyIndex];
+        }
+        if (e.key === "Tab") {
+            e.preventDefault();
+            showAutocomplete(cmdInput.value);
+        }
+    });
+
+    // Autocomplete
+    function showAutocomplete(input) {
+        const matches = suggestions.filter(s => s.startsWith(input.split(" ")[0]));
+        if (matches.length === 0) { autocomplete.classList.add("hidden"); return; }
+        autocomplete.innerHTML = matches.map(m => `<div onclick="selectSuggestion('${m}')">${m}</div>`).join("");
+        autocomplete.classList.remove("hidden");
+    }
+    function selectSuggestion(s) {
+        cmdInput.value = s + (s.endsWith(" ") ? "" : " ");
+        autocomplete.classList.add("hidden");
+        cmdInput.focus();
+    }
+    document.addEventListener("click", () => autocomplete.classList.add("hidden"));
+
+    // Run Command
+    async function runCmd() {
+        let cmd = cmdInput.value.trim();
+        if (!cmd) return;
+        history.push(cmd);
+        historyIndex = -1;
+        addToTerminal(`> ${cmd}`);
+        cmdInput.value = "";
+
+        const safeMode = document.getElementById("safeMode").checked;
         const res = await fetch("/run", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({cmd: command})
+            body: JSON.stringify({cmd, safe_mode: safeMode})
         });
-
         const data = await res.json();
 
-        document.getElementById("terminal").innerHTML += "<br><span>> " + command + "</span>";
-        document.getElementById("terminal").innerHTML += "<pre>" + data.output + "</pre>";
-        document.getElementById("terminal").scrollTop = terminal.scrollHeight;
+        const output = data.output.replace(/\n/g, "<br>").replace(/ /g, "&nbsp;");
+        const time = data.time ? ` <span style="color:#888;">(${data.time}s)</span>` : "";
+        const copyBtn = `<button class="copy-btn" onclick="copyText(this)">Copy</button>`;
+        addToTerminal(`<pre style="margin:5px 0;">${output}</pre>${time} ${copyBtn}`);
+        scrollTerminal();
     }
 
-    // --------------------------------------
-    // SSE REAL-TIME LOG STREAM
-    // --------------------------------------
-    const evtSource = new EventSource("/logs");
+    function addToTerminal(html) {
+        terminal.innerHTML += html + "<br>";
+    }
+    function scrollTerminal() {
+        terminal.scrollTop = terminal.scrollHeight;
+    }
+    function copyText(btn) {
+        const text = btn.parentElement.querySelector("pre").textContent;
+        navigator.clipboard.writeText(text);
+        btn.textContent = "Copied!";
+        setTimeout(() => btn.textContent = "Copy", 2000);
+    }
 
-    evtSource.onmessage = function(event) {
-        const logs = document.getElementById("logs");
-        logs.innerHTML += event.data + "<br>";
-        logs.scrollTop = logs.scrollHeight;
+    // SSE: Logs
+    const logSource = new EventSource("/logs");
+    logSource.onmessage = e => {
+        const data = JSON.parse(e.data);
+        if (data.type === 'log') {
+            logsDiv.innerHTML += `<div>${data.msg}</div>`;
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
     };
-</script>
 
+    // SSE: Stats
+    const statsSource = new EventSource("/stats");
+    statsSource.onmessage = e => {
+        const data = JSON.parse(e.data);
+        if (data.type === 'stats') {
+            document.getElementById("cpu").textContent = data.cpu;
+            document.getElementById("ram").textContent = data.memory;
+        }
+    };
+
+    // File Upload
+    async function uploadFile() {
+        const file = document.getElementById("fileInput").files[0];
+        if (!file) return alert("Select a file");
+        const form = new FormData();
+        form.append("file", file);
+        const res = await fetch("/upload", { method: "POST", body: form });
+        const json = await res.json();
+        alert(json.msg);
+        loadFiles();
+    }
+
+    async function loadFiles() {
+        const res = await fetch("/files");
+        const json = await res.json();
+        fileList.innerHTML = json.files.map(f => `
+            <div class="file-item">
+                <span>📄 ${f}</span>
+                <a href="/download/${f}" download>⬇️ Download</a>
+            </div>
+        `).join("") || "<i>No files</i>";
+    }
+    loadFiles();
+</script>
 </body>
-      </html>
+</html>
